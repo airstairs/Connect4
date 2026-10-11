@@ -1,0 +1,20 @@
+{
+  "allFiles": [
+    {
+      "file": "/storage/emulated/0/AndroidIDEProjects/ConnectFour/app/src/main/assets/index.html",
+      "selection": {
+        "end": {
+          "column": 0,
+          "index": 25529,
+          "line": 727
+        },
+        "start": {
+          "column": 0,
+          "index": 25529,
+          "line": 727
+        }
+      }
+    }
+  ],
+  "selectedFile": "/storage/emulated/0/AndroidIDEProjects/ConnectFour/app/src/main/assets/index.html"
+}

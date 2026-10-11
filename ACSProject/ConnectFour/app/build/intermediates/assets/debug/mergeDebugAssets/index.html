@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>3D Connect 4 - Touchscreen, AI & Scoreboard</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #0f172a;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        #top-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-sizing: border-box;
+            z-index: 10;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+
+        .ui-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #turn-card {
+            background: rgba(30, 41, 59, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 6px 14px;
+            border-radius: 20px;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .player-badge {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            transition: background-color 0.3s;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white;
+            border: none;
+            padding: 7px 14px;
+            border-radius: 16px;
+            font-weight: bold;
+            font-size: 13px;
+            cursor: pointer;
+            box-shadow: 0 3px 8px rgba(37, 99, 235, 0.4);
+            transition: transform 0.1s, background 0.3s;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .btn:focus, .btn:active {
+            outline: none;
+            transform: scale(0.95);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #475569, #334155);
+            box-shadow: 0 3px 8px rgba(71, 85, 105, 0.4);
+        }
+
+        #top-banner {
+            display: none;
+            position: absolute;
+            top: 65px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(30, 41, 59, 0.95);
+            border: 1px solid #3b82f6;
+            padding: 8px 20px;
+            border-radius: 12px;
+            color: white;
+            font-size: 15px;
+            font-weight: bold;
+            text-align: center;
+            z-index: 20;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            0% { transform: translate(-50%, -20px); opacity: 0; }
+            100% { transform: translate(-50%, 0); opacity: 1; }
+        }
+
+        /* Centered Burned-in Android Desk Branding & Logo */
+        #desk-branding {
+            position: absolute;
+            bottom: 14%;
+            left: 50%;
+            transform: translateX(-50%) perspective(500px) rotateX(42deg);
+            transform-origin: bottom center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            pointer-events: none;
+            z-index: 5;
+            user-select: none;
+        }
+
+        /* CSS Android Head Logo */
+        .android-logo {
+            width: 32px;
+            height: 18px;
+            background: #2b170b;
+            border-top-left-radius: 16px;
+            border-top-right-radius: 16px;
+            position: relative;
+            box-shadow: 
+                0px 1px 1px rgba(255, 255, 255, 0.15), 
+                0px -1px 1px rgba(0, 0, 0, 0.7);
+            opacity: 0.8;
+        }
+
+        .android-logo::before, .android-logo::after {
+            content: '';
+            position: absolute;
+            top: -7px;
+            width: 2px;
+            height: 7px;
+            background: #2b170b;
+        }
+        .android-logo::before {
+            left: 7px;
+            transform: rotate(-25deg);
+        }
+        .android-logo::after {
+            right: 7px;
+            transform: rotate(25deg);
+        }
+
+        .android-eyes {
+            position: absolute;
+            top: 7px;
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            padding: 0 6px;
+            box-sizing: border-box;
+        }
+        .android-eye {
+            width: 3px;
+            height: 3px;
+            background: #4a2e1b;
+            border-radius: 50%;
+            box-shadow: 0px 1px 1px rgba(255, 255, 255, 0.2);
+        }
+
+        .brand-text {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: 3px;
+            color: #2b170b;
+            text-shadow: 
+                0px 1px 1px rgba(255, 255, 255, 0.15), 
+                0px -1px 1px rgba(0, 0, 0, 0.7);
+            opacity: 0.8;
+            white-space: nowrap;
+        }
+
+        /* Corner Scoreboards */
+        .desk-score {
+            position: absolute;
+            bottom: 10%;
+            transform: perspective(500px) rotateX(42deg);
+            transform-origin: bottom center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #2b170b;
+            text-shadow: 
+                0px 1px 1px rgba(255, 255, 255, 0.15), 
+                0px -1px 1px rgba(0, 0, 0, 0.7);
+            opacity: 0.85;
+            pointer-events: none;
+            z-index: 5;
+            user-select: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #score-box-p1 {
+            left: 12%;
+        }
+
+        #score-box-p2 {
+            right: 12%;
+        }
+
+        .score-val {
+            font-size: 24px;
+            font-weight: 900;
+            margin-top: 2px;
+            text-shadow: 
+                0px 1px 1px rgba(255, 255, 255, 0.2), 
+                0px -1px 2px rgba(0, 0, 0, 0.8);
+        }
+
+        #score-p1 {
+            color: #ef4444; /* Red coin color */
+        }
+
+        #score-p2 {
+            color: #eab308; /* Yellow coin color */
+        }
+    </style>
+    <!-- Include Three.js locally -->
+    <script src="three.min.js"></script>
+</head>
+<body>
+
+    <div id="top-bar">
+        <div class="ui-group">
+            <div id="turn-card">
+                <span id="turn-indicator" class="player-badge" style="background-color: #ef4444;"></span>
+                <span id="turn-text">Red's Turn</span>
+            </div>
+        </div>
+        <div class="ui-group">
+            <button id="mode-btn" class="btn btn-secondary">Mode: 2 Player</button>
+            <button id="restart-btn" class="btn">Restart</button>
+        </div>
+    </div>
+
+    <div id="top-banner">
+        <span id="win-text">Red Wins!</span>
+    </div>
+
+    <!-- Centered Burned-in Android Desk Branding & Logo -->
+    <div id="desk-branding">
+        <div class="android-logo">
+            <div class="android-eyes">
+                <div class="android-eye"></div>
+                <div class="android-eye"></div>
+            </div>
+        </div>
+        <div class="brand-text">ANDROID</div>
+    </div>
+
+    <!-- Corner Scoreboards -->
+    <div id="score-box-p1" class="desk-score">
+        <span>PLAYER 1</span>
+        <span id="score-p1" class="score-val">0</span>
+    </div>
+
+    <div id="score-box-p2" class="desk-score">
+        <span id="p2-label">PLAYER 2</span>
+        <span id="score-p2" class="score-val">0</span>
+    </div>
+
+    <script>
+        // 1. Game State Setup
+        const COLS = 7;
+        const ROWS = 6;
+        let boardState = Array(COLS).fill(null).map(() => Array(ROWS).fill(0)); 
+        let currentPlayer = 1; 
+        let vsAndroid = false;
+        let gameOver = false;
+        let activeAnimations = [];
+        let isAiThinking = false;
+        let winningLineMesh = null;
+
+        // Score tracker state
+        let scoreP1 = 0;
+        let scoreP2 = 0;
+
+        // 2. Three.js Fixed Camera & Scene Setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0f172a);
+
+        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 2.2, 7.2);
+        camera.lookAt(0, 1.8, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
+
+        // Lights
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.4);
+        dirLight.position.set(6, 12, 8);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 1024;
+        dirLight.shadow.mapSize.height = 1024;
+        scene.add(dirLight);
+
+        // 3. Wooden Table Setup
+        const tableGeo = new THREE.BoxGeometry(10, 0.4, 6);
+        const tableMat = new THREE.MeshStandardMaterial({ color: 0x4a2e1b, roughness: 0.5 });
+        const table = new THREE.Mesh(tableGeo, tableMat);
+        table.position.y = -0.2;
+        table.receiveShadow = true;
+        scene.add(table);
+
+        const legGeo = new THREE.CylinderGeometry(0.2, 0.2, 4);
+        const legMat = new THREE.MeshStandardMaterial({ color: 0x2b1a0e });
+        [[-4.5, -2.2, -2.5], [4.5, -2.2, -2.5], [-4.5, -2.2, 2.5], [4.5, -2.2, 2.5]].forEach(pos => {
+            const leg = new THREE.Mesh(legGeo, legMat);
+            leg.position.set(...pos);
+            leg.castShadow = true;
+            scene.add(leg);
+        });
+
+        // 4. Construct Board with Hollow Channels & Hole Windows
+        const slotSpacing = 0.55;
+        const startX = -((COLS - 1) * slotSpacing) / 2;
+        const startY = 0.6;
+        const boardGroup = new THREE.Group();
+
+        const blueMat = new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.2, metalness: 0.1 });
+        const wallThickness = 0.08;
+        const frameDepth = 0.35;
+        const boardHeight = ROWS * slotSpacing + 0.3;
+
+        for (let c = 0; c < COLS; c++) {
+            const colX = startX + c * slotSpacing;
+            const pillarGeo = new THREE.BoxGeometry(wallThickness, boardHeight, frameDepth);
+            const pillarLeft = new THREE.Mesh(pillarGeo, blueMat);
+            pillarLeft.position.set(colX - slotSpacing / 2, startY + boardHeight / 2 - 0.2, 0);
+            pillarLeft.castShadow = true;
+            boardGroup.add(pillarLeft);
+
+            if (c === COLS - 1) {
+                const pillarRight = new THREE.Mesh(pillarGeo, blueMat);
+                pillarRight.position.set(colX + slotSpacing / 2, startY + boardHeight / 2 - 0.2, 0);
+                pillarRight.castShadow = true;
+                boardGroup.add(pillarRight);
+            }
+
+            for (let r = 0; r < ROWS; r++) {
+                const ringGeo = new THREE.RingGeometry(0.2, 0.25, 32);
+                const ringFront = new THREE.Mesh(ringGeo, blueMat);
+                ringFront.position.set(colX, startY + r * slotSpacing, frameDepth / 2 + 0.001);
+                boardGroup.add(ringFront);
+
+                const ringBack = new THREE.Mesh(ringGeo, blueMat);
+                ringBack.position.set(colX, startY + r * slotSpacing, -frameDepth / 2 - 0.001);
+                ringBack.rotation.y = Math.PI;
+                boardGroup.add(ringBack);
+            }
+        }
+
+        const totalWidth = COLS * slotSpacing + wallThickness;
+        const topBarMesh = new THREE.Mesh(new THREE.BoxGeometry(totalWidth, 0.2, frameDepth), blueMat);
+        topBarMesh.position.set(0, startY + boardHeight - 0.1, 0);
+        topBarMesh.castShadow = true;
+        boardGroup.add(topBarMesh);
+
+        const bottomBar = new THREE.Mesh(new THREE.BoxGeometry(totalWidth, 0.3, frameDepth + 0.1), blueMat);
+        bottomBar.position.set(0, startY - 0.2, 0);
+        bottomBar.castShadow = true;
+        boardGroup.add(bottomBar);
+
+        const standLegGeo = new THREE.BoxGeometry(0.3, 1.2, 1.2);
+        const legL = new THREE.Mesh(standLegGeo, blueMat);
+        legL.position.set(-totalWidth / 2 - 0.1, startY - 0.1, 0);
+        legL.castShadow = true;
+        boardGroup.add(legL);
+
+        const legR = new THREE.Mesh(standLegGeo, blueMat);
+        legR.position.set(totalWidth / 2 + 0.1, startY - 0.1, 0);
+        legR.castShadow = true;
+        boardGroup.add(legR);
+
+        scene.add(boardGroup);
+
+        // 5. Column Click/Touch Detectors & Highlights
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        const columnColliders = [];
+
+        const colDetectorGeo = new THREE.BoxGeometry(slotSpacing, boardHeight + 1, frameDepth * 1.5);
+        const detectorMat = new THREE.MeshBasicMaterial({ visible: false });
+
+        const highlightGeo = new THREE.ConeGeometry(0.2, 0.3, 4);
+        const highlightMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+        const columnHighlights = [];
+
+        for (let c = 0; c < COLS; c++) {
+            const detector = new THREE.Mesh(colDetectorGeo, detectorMat);
+            const colX = startX + c * slotSpacing;
+            detector.position.set(colX, startY + boardHeight / 2, 0);
+            detector.userData = { colIndex: c };
+            scene.add(detector);
+            columnColliders.push(detector);
+
+            const indicator = new THREE.Mesh(highlightGeo, highlightMat);
+            indicator.position.set(colX, startY + boardHeight + 0.2, 0);
+            indicator.rotation.x = Math.PI;
+            indicator.visible = false;
+            scene.add(indicator);
+            columnHighlights.push(indicator);
+        }
+
+        const coinGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.1, 32);
+        const redMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.2, metalness: 0.1 });
+        const yellowMat = new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.2, metalness: 0.1 });
+        const playedDiscs = [];
+
+        // 6. Game Logic & AI
+        function dropDisc(colIndex, player) {
+            if (gameOver) return false;
+
+            let targetRow = -1;
+            for (let r = 0; r < ROWS; r++) {
+                if (boardState[colIndex][r] === 0) {
+                    targetRow = r;
+                    break;
+                }
+            }
+
+            if (targetRow === -1) return false;
+
+            boardState[colIndex][targetRow] = player;
+
+            const mat = player === 1 ? redMat : yellowMat;
+            const disc = new THREE.Mesh(coinGeo, mat);
+            disc.rotation.x = Math.PI / 2;
+            disc.castShadow = true;
+
+            const targetX = startX + colIndex * slotSpacing;
+            const startYPos = startY + boardHeight + 0.5;
+            const targetYPos = startY + targetRow * slotSpacing;
+
+            disc.position.set(targetX, startYPos, 0);
+            scene.add(disc);
+            playedDiscs.push(disc);
+
+            activeAnimations.push({
+                mesh: disc,
+                currentY: startYPos,
+                targetY: targetYPos,
+                velocityY: 0,
+                gravity: -0.015,
+                bounces: 0
+            });
+
+            const winDetails = checkWin(colIndex, targetRow, player);
+            if (winDetails) {
+                gameOver = true;
+                drawWinningLine(winDetails);
+                
+                if (player === 1) {
+                    scoreP1++;
+                } else {
+                    scoreP2++;
+                }
+                updateScoreboard();
+
+                const winnerName = player === 1 ? "Red Wins!" : (vsAndroid ? "Android Wins!" : "Yellow Wins!");
+                setTimeout(() => showTopBanner(winnerName), 400);
+            } else if (boardState.every(col => col.every(cell => cell !== 0))) {
+                gameOver = true;
+                setTimeout(() => showTopBanner("It's a Draw!"), 400);
+            } else {
+                currentPlayer = player === 1 ? 2 : 1;
+                updateUI();
+
+                if (vsAndroid && currentPlayer === 2 && !gameOver) {
+                    isAiThinking = true;
+                    setTimeout(makeAiMove, 600);
+                }
+            }
+            return true;
+        }
+
+        function makeAiMove() {
+            if (gameOver) { isAiThinking = false; return; }
+
+            let bestCol = findWinningMove(2);
+            if (bestCol === -1) {
+                bestCol = findWinningMove(1);
+            }
+            if (bestCol === -1) {
+                const validCols = [];
+                for (let c = 0; c < COLS; c++) {
+                    if (boardState[c][ROWS - 1] === 0) validCols.push(c);
+                }
+                validCols.sort((a, b) => Math.abs(a - 3) - Math.abs(b - 3));
+                bestCol = validCols.length > 0 ? validCols[0] : 0;
+            }
+
+            dropDisc(bestCol, 2);
+            isAiThinking = false;
+        }
+
+        function findWinningMove(player) {
+            for (let c = 0; c < COLS; c++) {
+                let targetRow = -1;
+                for (let r = 0; r < ROWS; r++) {
+                    if (boardState[c][r] === 0) {
+                        targetRow = r;
+                        break;
+                    }
+                }
+                if (targetRow !== -1) {
+                    boardState[c][targetRow] = player;
+                    const wins = checkWin(c, targetRow, player);
+                    boardState[c][targetRow] = 0;
+                    if (wins) return c;
+                }
+            }
+            return -1;
+        }
+
+        function checkWin(col, row, player) {
+            const directions = [
+                { dx: 0, dy: 1 },  // Vertical
+                { dx: 1, dy: 0 },  // Horizontal
+                { dx: 1, dy: 1 },  // Diagonal /
+                { dx: 1, dy: -1 }  // Diagonal \
+            ];
+
+            for (let dir of directions) {
+                let winningCells = [{col, row}];
+
+                let c = col + dir.dx;
+                let r = row + dir.dy;
+                while (c >= 0 && c < COLS && r >= 0 && r < ROWS && boardState[c][r] === player) {
+                    winningCells.push({col: c, row: r});
+                    c += dir.dx;
+                    r += dir.dy;
+                }
+
+                c = col - dir.dx;
+                r = row - dir.dy;
+                while (c >= 0 && c < COLS && r >= 0 && r < ROWS && boardState[c][r] === player) {
+                    winningCells.push({col: c, row: r});
+                    c -= dir.dx;
+                    r -= dir.dy;
+                }
+
+                if (winningCells.length >= 4) {
+                    return winningCells.slice(0, 4);
+                }
+            }
+            return null;
+        }
+
+        function drawWinningLine(cells) {
+            const startCell = cells[0];
+            const endCell = cells[cells.length - 1];
+
+            const p1 = new THREE.Vector3(
+                startX + startCell.col * slotSpacing,
+                startY + startCell.row * slotSpacing,
+                0.08
+            );
+            const p2 = new THREE.Vector3(
+                startX + endCell.col * slotSpacing,
+                startY + endCell.row * slotSpacing,
+                0.08
+            );
+
+            const distance = p1.distanceTo(p2);
+            const lineGeo = new THREE.CylinderGeometry(0.06, 0.06, distance, 16);
+            const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+            winningLineMesh = new THREE.Mesh(lineGeo, lineMat);
+            winningLineMesh.position.copy(p1.clone().add(p2).multiplyScalar(0.5));
+            winningLineMesh.quaternion.setFromUnitVectors(
+                new THREE.Vector3(0, 1, 0),
+                p2.clone().sub(p1).normalize()
+            );
+
+            scene.add(winningLineMesh);
+        }
+
+        function updateUI() {
+            const badge = document.getElementById('turn-indicator');
+            const text = document.getElementById('turn-text');
+            if (currentPlayer === 1) {
+                badge.style.backgroundColor = '#ef4444';
+                text.textContent = "Red's Turn";
+                highlightMat.color.setHex(0xef4444);
+            } else {
+                badge.style.backgroundColor = '#eab308';
+                text.textContent = vsAndroid ? "Android's Turn..." : "Yellow's Turn";
+                highlightMat.color.setHex(0xeab308);
+            }
+        }
+
+        function updateScoreboard() {
+            document.getElementById('score-p1').textContent = scoreP1;
+            document.getElementById('score-p2').textContent = scoreP2;
+        }
+
+        function showTopBanner(msg) {
+            const banner = document.getElementById('top-banner');
+            document.getElementById('win-text').textContent = msg;
+            banner.style.display = 'block';
+        }
+
+        function resetGame() {
+            boardState = Array(COLS).fill(null).map(() => Array(ROWS).fill(0));
+            playedDiscs.forEach(disc => scene.remove(disc));
+            playedDiscs.length = 0;
+            activeAnimations.length = 0;
+            if (winningLineMesh) {
+                scene.remove(winningLineMesh);
+                winningLineMesh = null;
+            }
+            currentPlayer = 1;
+            gameOver = false;
+            isAiThinking = false;
+            document.getElementById('top-banner').style.display = 'none';
+            updateUI();
+        }
+
+        document.getElementById('restart-btn').addEventListener('click', resetGame);
+
+        const modeBtn = document.getElementById('mode-btn');
+        modeBtn.addEventListener('click', () => {
+            vsAndroid = !vsAndroid;
+            modeBtn.textContent = vsAndroid ? "Mode: VS Android" : "Mode: 2 Player";
+            modeBtn.style.background = vsAndroid ? "linear-gradient(135deg, #059669, #047857)" : "linear-gradient(135deg, #475569, #334155)";
+            
+            document.getElementById('p2-label').textContent = vsAndroid ? "ANDROID" : "PLAYER 2";
+            
+            scoreP1 = 0;
+            scoreP2 = 0;
+            updateScoreboard();
+            resetGame();
+        });
+
+        // 7. Touch & Click Controls (Direct Tap to Drop)
+        window.addEventListener('pointerup', (e) => {
+            if (e.target.closest('#top-bar') || e.target.closest('#top-banner')) return;
+            if (gameOver || (vsAndroid && currentPlayer === 2) || isAiThinking) return;
+
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(columnColliders);
+
+            if (intersects.length > 0) {
+                const colIndex = intersects[0].object.userData.colIndex;
+                dropDisc(colIndex, currentPlayer);
+            }
+        });
+
+        window.addEventListener('pointermove', (e) => {
+            if (e.target.closest('#top-bar') || e.target.closest('#top-banner')) return;
+
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(columnColliders);
+
+            columnHighlights.forEach(h => h.visible = false);
+            if (intersects.length > 0 && !gameOver && !(vsAndroid && currentPlayer === 2)) {
+                const colIndex = intersects[0].object.userData.colIndex;
+                columnHighlights[colIndex].visible = true;
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // 8. Animation Loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            for (let i = activeAnimations.length - 1; i >= 0; i--) {
+                const anim = activeAnimations[i];
+                anim.velocityY += anim.gravity;
+                anim.currentY += anim.velocityY;
+
+                if (anim.currentY <= anim.targetY) {
+                    anim.currentY = anim.targetY;
+                    anim.velocityY = -anim.velocityY * 0.35;
+                    anim.bounces++;
+
+                    if (anim.bounces >= 2) {
+                        anim.mesh.position.y = anim.targetY;
+                        activeAnimations.splice(i, 1);
+                        continue;
+                    }
+                }
+                anim.mesh.position.y = anim.currentY;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
